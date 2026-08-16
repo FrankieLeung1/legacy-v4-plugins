@@ -6,7 +6,10 @@
     "status-full": "Carica",
     "status-unknown": "Sconosciuto",
     "time-to-full": "Tempo al completamento: {time}",
-    "remaining": "Rimanente: {time}"
+    "remaining": "Rimanente: {time}",
+    "conservation-mode": "Modalità Conservazione",
+    "conservation-desc-on": "Limita la carica all'80% per preservare la batteria",
+    "conservation-desc-off": "Carica completa al 100%"
   },
   "settings": {
     "dynamic-coloring": "Colorazione dinamica",

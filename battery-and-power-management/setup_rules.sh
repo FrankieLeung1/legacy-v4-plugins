@@ -36,8 +36,13 @@ usermod -aG battery_ctl "$TARGET_USER"
 # Generate the udev rules file directly
 echo "Generating $RULE_FILE..."
 cat <<EOF > "$RULE_FILE"
-ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_control_end_threshold}!="?*", GROUP="battery_ctl", MODE="0664"
-ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT0", ATTR{charge_control_end_threshold}=="?*", GROUP="battery_ctl", MODE="0664"
+# Battery charge control thresholds
+ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT*", ATTR{charge_control_end_threshold}=="?*", GROUP="battery_ctl", MODE="0664"
+
+# Lenovo IdeaPad / Legion conservation mode
+ACTION=="add|change", SUBSYSTEM=="power_supply", KERNEL=="BAT*", RUN+="/bin/chmod g+w /sys\$devpath/extensions/ideapad_laptop/conservation_mode", RUN+="/bin/chgrp battery_ctl /sys\$devpath/extensions/ideapad_laptop/conservation_mode"
+ACTION=="add|change", SUBSYSTEM=="platform", DRIVER=="ideapad_acpi", ATTR{conservation_mode}=="?*", GROUP="battery_ctl", MODE="0664"
+ACTION=="add|change", SUBSYSTEM=="platform", KERNEL=="VPC2004:00", ATTR{conservation_mode}=="?*", GROUP="battery_ctl", MODE="0664"
 EOF
 
 # Apply configuration

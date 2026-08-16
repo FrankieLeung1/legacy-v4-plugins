@@ -58,6 +58,11 @@ Item {
     
     property string currentProfile: "balanced"
     property int batteryThreshold: 80
+    property bool hasStandardThreshold: false
+    property bool hasConservationMode: false
+    property bool conservationMode: false
+    property string conservationFilePath: "/sys/class/power_supply/BAT1/extensions/ideapad_laptop/conservation_mode"
+    property string thresholdFilePath: "/sys/class/power_supply/BAT1/charge_control_end_threshold"
 
     readonly property real contentWidth: layout.implicitWidth + Style.marginM * 2
     readonly property real contentHeight: capsuleHeight
@@ -168,17 +173,66 @@ Item {
         if (pluginApi) {
             pluginApi.mainInstance = root;
         }
+        hardwareDetector.running = true;
         updatePowerProfile();
-        thresholdLoader.reload();
     }
 
-    // ===== Battery Logic =====
+    // ===== Battery & Conservation Logic =====
+
+    Process {
+        id: hardwareDetector
+        running: false
+        command: ["sh", "-c", "bat='BAT0'; [ -d /sys/class/power_supply/BAT1 ] && bat='BAT1'; cons=''; if [ -f /sys/class/power_supply/$bat/extensions/ideapad_laptop/conservation_mode ]; then cons=/sys/class/power_supply/$bat/extensions/ideapad_laptop/conservation_mode; elif [ -f /sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode ]; then cons=/sys/bus/platform/drivers/ideapad_acpi/VPC2004:00/conservation_mode; fi; thresh=''; [ -f /sys/class/power_supply/$bat/charge_control_end_threshold ] && thresh=/sys/class/power_supply/$bat/charge_control_end_threshold; echo \"$bat|$thresh|$cons\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let out = text.trim();
+                if (!out) return;
+                let parts = out.split("|");
+                let dev = parts[0] || "BAT1";
+                let thresh = parts[1] || "";
+                let cons = parts[2] || "";
+
+                batLoader.device = dev;
+                if (thresh) {
+                    root.hasStandardThreshold = true;
+                    root.thresholdFilePath = thresh;
+                    thresholdLoader.path = thresh;
+                }
+                if (cons) {
+                    root.hasConservationMode = true;
+                    root.conservationFilePath = cons;
+                    ideapadConservationLoader.path = cons;
+                }
+                batLoader.reload();
+                if (thresh) thresholdLoader.reload();
+                if (cons) ideapadConservationLoader.reload();
+            }
+        }
+    }
+
+    function setConservationMode(enabled) {
+        root.conservationMode = enabled;
+        root.batteryThreshold = enabled ? 80 : 100;
+        let val = enabled ? 1 : 0;
+        let path = root.conservationFilePath || "/sys/class/power_supply/BAT1/extensions/ideapad_laptop/conservation_mode";
+        thresholdSetter.running = false;
+        thresholdSetter.command = ["sh", "-c", "echo " + val + " > " + path];
+        thresholdSetter.running = true;
+    }
 
     function setBatteryThreshold(value) {
         root.batteryThreshold = value;
-        let devPath = pluginApi?.pluginSettings?.batteryDevice ?? "/sys/class/power_supply/BAT0";
         thresholdSetter.running = false;
-        thresholdSetter.command = ["sh", "-c", "echo " + value + " > " + devPath + "/charge_control_end_threshold"];
+        if (root.hasStandardThreshold) {
+            let devPath = root.thresholdFilePath || "/sys/class/power_supply/BAT1/charge_control_end_threshold";
+            thresholdSetter.command = ["sh", "-c", "echo " + value + " > " + devPath];
+        } else if (root.hasConservationMode) {
+            let enabled = value <= 85;
+            root.conservationMode = enabled;
+            let val = enabled ? 1 : 0;
+            let path = root.conservationFilePath || "/sys/class/power_supply/BAT1/extensions/ideapad_laptop/conservation_mode";
+            thresholdSetter.command = ["sh", "-c", "echo " + val + " > " + path];
+        }
         thresholdSetter.running = true;
     }
 
@@ -186,7 +240,10 @@ Item {
         id: thresholdSetter
         onExited: (code) => {
             if (code !== 0) {
-                Logger.e("BatteryAndPowerManagement", "Error writing battery threshold.");
+                Logger.e("BatteryAndPowerManagement", "Error writing battery threshold / conservation mode.");
+            } else {
+                if (root.hasConservationMode) ideapadConservationLoader.reload();
+                if (root.hasStandardThreshold) thresholdLoader.reload();
             }
         }
     }
@@ -215,12 +272,11 @@ Item {
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            let devPath = pluginApi?.pluginSettings?.batteryDevice ?? "/sys/class/power_supply/BAT0";
-            let dev = devPath.split("/").pop() || "BAT0";
-            batLoader.device = dev;
             batLoader.reload();
-            thresholdLoader.reload();
+            if (root.hasStandardThreshold) thresholdLoader.reload();
+            if (root.hasConservationMode) ideapadConservationLoader.reload();
 
+            let dev = batLoader.device || "BAT1";
             etaGetter.running = false;
             etaGetter.command = ["upower", "-i", "/org/freedesktop/UPower/devices/battery_" + dev];
             etaGetter.running = true;
@@ -229,20 +285,42 @@ Item {
 
     FileView {
         id: thresholdLoader
-        path: (pluginApi?.pluginSettings?.batteryDevice ?? "/sys/class/power_supply/BAT0") + "/charge_control_end_threshold"
+        path: root.thresholdFilePath
         printErrors: false
         onLoaded: {
             let val = text();
             if (val) {
                 let parsed = parseInt(val.trim());
-                if (!isNaN(parsed) && parsed >= 50 && parsed <= 100) root.batteryThreshold = parsed;
+                if (!isNaN(parsed) && parsed >= 50 && parsed <= 100) {
+                    root.hasStandardThreshold = true;
+                    root.batteryThreshold = parsed;
+                }
+            }
+        }
+    }
+
+    FileView {
+        id: ideapadConservationLoader
+        path: root.conservationFilePath
+        printErrors: false
+        onLoaded: {
+            let val = text();
+            if (val) {
+                let parsed = parseInt(val.trim());
+                if (!isNaN(parsed) && (parsed === 0 || parsed === 1)) {
+                    root.hasConservationMode = true;
+                    root.conservationMode = (parsed === 1);
+                    if (!root.hasStandardThreshold) {
+                        root.batteryThreshold = (parsed === 1 ? 80 : 100);
+                    }
+                }
             }
         }
     }
 
     FileView {
         id: batLoader
-        property string device: "BAT0"
+        property string device: "BAT1"
         path: "/sys/class/power_supply/" + device + "/uevent"
         printErrors: false
 

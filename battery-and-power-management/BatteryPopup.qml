@@ -11,11 +11,11 @@ Item {
     
     readonly property var mainWidget: pluginApi?.mainInstance || null
 
-    property real contentPreferredWidth: (panelContent.implicitWidth + Style.marginM * 10) * Style.uiScaleRatio
-    property real contentPreferredHeight: (mainLayout.implicitHeight + Style.marginM * 4) * Style.uiScaleRatio
-    
-    readonly property var geometryPlaceholder: mainLayout
+    readonly property var geometryPlaceholder: panelContainer
     readonly property bool allowAttach: true
+
+    property real contentPreferredWidth: 340 * Style.uiScaleRatio
+    property real contentPreferredHeight: contentColumn.implicitHeight + Style.marginL * 2
 
     anchors.fill: parent
 
@@ -25,15 +25,22 @@ Item {
         }
     }
 
+    Rectangle {
+        id: panelContainer
+        anchors.fill: parent
+        color: "transparent"
+    }
+
     ColumnLayout {
-        id: mainLayout
-        anchors.centerIn: parent
+        id: contentColumn
+        anchors.fill: parent
+        anchors.margins: Style.marginL
         spacing: Style.marginM
 
         // --- CAPSULE 1: BATTERY INFO ---
         Rectangle {
             id: batteryCapsule
-            Layout.preferredWidth: root.contentPreferredWidth - (Style.marginM * 2)
+            Layout.fillWidth: true
             Layout.preferredHeight: 64 * Style.uiScaleRatio
             
             color: Color.mSurfaceVariant
@@ -83,7 +90,7 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
 
                     NText {
-                        text: root.mainWidget ? root.mainWidget.batStatus : pluginApi?.tr("battery.status_unknown")
+                        text: root.mainWidget ? root.mainWidget.batStatus : pluginApi?.tr("battery.status-unknown")
                         font.weight: Font.Bold
                         pointSize: Style.fontSizeS
                         color: Color.mOnSurface
@@ -95,9 +102,9 @@ Item {
                             if (!root.mainWidget) {
                                 return "...";
                             }
-                            if (root.mainWidget.batStatus === pluginApi?.tr("battery.status_charging")) {
-                                return pluginApi?.tr("battery.time_to_full", { time: root.mainWidget.timeRemaining });
-                            } else if (root.mainWidget.batStatus === pluginApi?.tr("battery.status_discharging")) {
+                            if (root.mainWidget.batStatus === pluginApi?.tr("battery.status-charging")) {
+                                return pluginApi?.tr("battery.time-to-full", { time: root.mainWidget.timeRemaining });
+                            } else if (root.mainWidget.batStatus === pluginApi?.tr("battery.status-discharging")) {
                                 return pluginApi?.tr("battery.remaining", { time: root.mainWidget.timeRemaining });
                             } else {
                                 return root.mainWidget.wattNum.toFixed(1) + " W";
@@ -115,7 +122,7 @@ Item {
         // --- CAPSULE 2: POWER PROFILE ---
         Rectangle {
             id: profileCapsule
-            Layout.preferredWidth: batteryCapsule.Layout.preferredWidth
+            Layout.fillWidth: true
             Layout.preferredHeight: 52 * Style.uiScaleRatio
             
             color: Color.mSurfaceVariant
@@ -150,22 +157,73 @@ Item {
             }
         }
 
-        // --- CAPSULE 3: BATTERY THRESHOLD ---
+        // --- CAPSULE 3: BATTERY THRESHOLD / CONSERVATION MODE ---
         Rectangle {
             id: thresholdCapsule
-            Layout.preferredWidth: batteryCapsule.Layout.preferredWidth
-            Layout.preferredHeight: 52 * Style.uiScaleRatio
+            Layout.fillWidth: true
+            Layout.preferredHeight: 56 * Style.uiScaleRatio
+            visible: (root.mainWidget?.hasStandardThreshold || root.mainWidget?.hasConservationMode) ?? true
             
             color: Color.mSurfaceVariant
             radius: Style.capsuleRadius ?? Style.radiusM
             border.color: Style.capsuleBorderColor
             border.width: Style.capsuleBorderWidth
 
+            // IdeaPad Conservation Mode Toggle
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: Style.marginL
                 anchors.rightMargin: Style.marginL
                 spacing: Style.marginM
+                visible: root.mainWidget?.hasConservationMode && !root.mainWidget?.hasStandardThreshold
+
+                NIcon {
+                    icon: "shield-heart"
+                    pointSize: Style.fontSizeM
+                    color: root.mainWidget?.conservationMode ? Color.mPrimary : Color.mOnSurfaceVariant
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 2
+
+                    NText {
+                        text: pluginApi?.tr("battery.conservation-mode") ?? "Conservation Mode"
+                        font.weight: Font.DemiBold
+                        pointSize: Style.fontSizeS
+                        color: Color.mOnSurface
+                    }
+
+                    NText {
+                        text: root.mainWidget?.conservationMode 
+                            ? (pluginApi?.tr("battery.conservation-desc-on") ?? "Caps charge at 80% to protect battery")
+                            : (pluginApi?.tr("battery.conservation-desc-off") ?? "Full charge to 100%")
+                        pointSize: Style.fontSizeXS
+                        color: Color.mOnSurfaceVariant
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                }
+
+                NToggle {
+                    id: conservationToggle
+                    Layout.alignment: Qt.AlignVCenter
+                    checked: root.mainWidget ? root.mainWidget.conservationMode : false
+                    onToggled: checked => {
+                        root.mainWidget?.setConservationMode(checked)
+                    }
+                }
+            }
+
+            // Standard Hardware Threshold Slider
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Style.marginL
+                anchors.rightMargin: Style.marginL
+                spacing: Style.marginM
+                visible: !(root.mainWidget?.hasConservationMode && !root.mainWidget?.hasStandardThreshold)
 
                 NIcon {
                     icon: "shield-heart"

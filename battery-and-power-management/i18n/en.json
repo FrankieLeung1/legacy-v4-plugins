@@ -6,7 +6,10 @@
     "status-full": "Full",
     "status-unknown": "Unknown",
     "time-to-full": "Time to full: {time}",
-    "remaining": "Remaining: {time}"
+    "remaining": "Remaining: {time}",
+    "conservation-mode": "Conservation Mode",
+    "conservation-desc-on": "Caps charge at 80% to protect battery",
+    "conservation-desc-off": "Full charge to 100%"
   },
   "settings": {
     "dynamic-coloring": "Dynamic coloring",
