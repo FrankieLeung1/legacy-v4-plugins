@@ -11,7 +11,8 @@ ColumnLayout {
   property var cfg: pluginApi?.pluginSettings || ({})
   property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
 
-  property bool hideIfNoDeviceConnected: pluginApi?.mainInstance?.hideIfNoDeviceConnected ?? (pluginApi?.pluginSettings?.hideIfNoDeviceConnected ?? false)
+  property bool hideIfNoDeviceConnected: cfg.hideIfNoDeviceConnected ?? defaults.hideIfNoDeviceConnected ?? false
+  property bool keepBatteryExpanded: cfg.keepBatteryExpanded ?? defaults.keepBatteryExpanded ?? false
 
   spacing: Style.marginL
 
@@ -28,6 +29,16 @@ ColumnLayout {
             root.hideIfNoDeviceConnected = checked
         }
     }
+
+    NToggle {
+        label: pluginApi?.tr("settings.keep-battery-expanded.label")
+        description: pluginApi?.tr("settings.keep-battery-expanded.description")
+
+        checked: root.keepBatteryExpanded
+        onToggled: function(checked) {
+            root.keepBatteryExpanded = checked
+        }
+    }
   }
 
   function saveSettings() {
@@ -37,6 +48,7 @@ ColumnLayout {
     }
 
     pluginApi.pluginSettings.hideIfNoDeviceConnected = root.hideIfNoDeviceConnected;
+    pluginApi.pluginSettings.keepBatteryExpanded = root.keepBatteryExpanded;
     pluginApi.saveSettings();
 
     Logger.d("KDEConnect", "Settings saved successfully");

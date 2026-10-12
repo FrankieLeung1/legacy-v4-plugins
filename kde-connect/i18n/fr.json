@@ -40,5 +40,15 @@
       "no-device": "Aucun appareil",
       "not-paired": "Non couplé"
     }
+  },
+  "settings": {
+    "no-device-connected-hide": {
+      "label": "Masquer si indisponible",
+      "description": "Masquer complètement le bouton de la barre si aucun appareil n'est connecté"
+    },
+    "keep-battery-expanded": {
+      "label": "Toujours afficher le niveau de batterie",
+      "description": "Garder le pourcentage de la batterie affiché dans la barre sans avoir à survoler"
+    }
   }
 }
