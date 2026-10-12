@@ -742,7 +742,7 @@
     {
       "id": "kde-connect",
       "name": "KDE Connect",
-      "version": "1.2.1",
+      "version": "1.3.0",
       "official": false,
       "author": "WerWolv",
       "description": "A Plugin integrating your mobile devices into a panel using KDEConnect",
@@ -755,7 +755,7 @@
         "Utility",
         "System"
       ],
-      "lastUpdated": "2026-03-29T19:05:12-04:00"
+      "lastUpdated": "2026-10-12T12:24:41-04:00"
     },
     {
       "id": "keep-awake-plus",
