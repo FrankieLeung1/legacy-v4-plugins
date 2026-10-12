@@ -44,5 +44,15 @@
       "no-device": "Nenhum dispositivo",
       "not-paired": "Não pareado"
     }
+  },
+  "settings": {
+    "no-device-connected-hide": {
+      "label": "Ocultar se indisponível",
+      "description": "Ocultar o botão da barra se nenhum dispositivo estiver conectado"
+    },
+    "keep-battery-expanded": {
+      "label": "Sempre mostrar nível da bateria",
+      "description": "Manter a porcentagem da bateria expandida na barra sem precisar passar o cursor"
+    }
   }
 }

@@ -50,6 +50,10 @@
     "no-device-connected-hide": {
       "label": "Hide if unavailable",
       "description": "Hide the bar button entirely if no device is connected"
+    },
+    "keep-battery-expanded": {
+      "label": "Always show battery level",
+      "description": "Keep the battery percentage expanded in the bar pill without needing to hover"
     }
   }
 }

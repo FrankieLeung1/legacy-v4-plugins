@@ -27,11 +27,14 @@ Item {
 
   implicitWidth: pill.width
   implicitHeight: pill.height
-  visible: !hideIfNoDeviceConnected ? true : KDEConnect.anyDevicesConnected;
-  opacity: (!hideIfNoDeviceConnected ? true : KDEConnect.anyDevicesConnected) ? 1.0 : 0.0;
+  visible: !hideIfNoDeviceConnected ? true : KDEConnect.anyDevicesConnected
+  opacity: (!hideIfNoDeviceConnected ? true : KDEConnect.anyDevicesConnected) ? 1.0 : 0.0
 
-  property bool hideIfNoDeviceConnected: !(root.pluginApi?.mainInstance?.hideIfNoDeviceConnected ?? false)
+  property var cfg: pluginApi?.pluginSettings || ({})
+  property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
 
+  readonly property bool hideIfNoDeviceConnected: cfg.hideIfNoDeviceConnected ?? defaults.hideIfNoDeviceConnected ?? false
+  readonly property bool keepBatteryExpanded: cfg.keepBatteryExpanded ?? defaults.keepBatteryExpanded ?? false
 
   BarPill {
     id: pill
@@ -41,6 +44,7 @@ Item {
     customIconColor: Color.resolveColorKeyOptional(root.iconColorKey)
     customTextColor: Color.resolveColorKeyOptional(root.textColorKey)
     icon: KDEConnectUtils.getConnectionStateIcon(KDEConnect.mainDevice, KDEConnect.daemonAvailable)
+    forceOpen: root.keepBatteryExpanded && pill.text !== ""
     autoHide: false // Important to be false so we can hover as long as we want
     text: !KDEConnect.daemonAvailable || KDEConnect.mainDevice === null || KDEConnect.mainDevice.battery === -1 ? "" : (KDEConnect.mainDevice.battery + "%")
     tooltipText: pluginApi?.tr("bar.tooltip")
